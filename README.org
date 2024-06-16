@@ -29,9 +29,11 @@ Misc lsp customizations.
              :repo "KarimAziev/km-lsp"
              :type git
              :host github)
+  :after lsp-mode
   :demand t
-  :after lsp
   :config
+  (when (boundp 'lsp-mode-map)
+    (define-key lsp-mode-map (kbd "C-.") 'km-lsp-menu))
   (with-eval-after-load 'lsp-volar
     (when (fboundp 'lsp-register-custom-settings)
       (lsp-register-custom-settings

@@ -6,7 +6,7 @@
 ;; URL: https://github.com/KarimAziev/km-lsp
 ;; Version: 0.1.0
 ;; Keywords: convenience
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "29.1") (transient "0.6.0"))
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is NOT part of GNU Emacs.
@@ -32,8 +32,9 @@
 
 
 
-
+(require 'transient)
 (defvar-local km-lsp-custom-typescript-sdk-path nil)
+
 
 (declare-function project-root "project")
 (declare-function project-files "project")
@@ -98,6 +99,43 @@ Usage example:
           (when (fboundp
                  'lsp-volar-get-typescript-tsdk-path)
             (lsp-volar-get-typescript-tsdk-path))))))
+
+;;;###autoload (autoload 'km-lsp-menu "km-lsp" nil t)
+(transient-define-prefix km-lsp-menu ()
+  "Command dispatcher for LSP related commands."
+  [["Refactor"
+    ("r" "Rename" lsp-rename)
+    ("= =" "Lsp Format Buffer" lsp-format-buffer)
+    ("= r" "Lsp Format Region" lsp-format-region)
+    ("T f" "Toggle on type formatting" lsp-toggle-on-type-formatting
+     :transient t)]
+   ["Actions"
+    ("a" "Code actions" lsp-execute-code-action)
+    ("i" "Imports fix" lsp-organize-imports)
+    ("." "Show Signature" lsp-signature-activate)
+    ("S" "Lsp Toggle Signature Auto Activate"
+     lsp-toggle-signature-auto-activate :transient t)]]
+  [["Navigation"
+    ("f d" "Find definition" lsp-find-definition)
+    ("f t" "Find type definition" lsp-find-type-definition)
+    ("f i" "Find implementation" lsp-find-implementation)
+    ("f ." "Find references" lsp-find-references)
+    ("h" "Highlight references" lsp-document-highlight)]]
+  [["Workspace"
+    ("w b" "Lsp Workspace Blocklist Remove" lsp-workspace-blocklist-remove)
+    ("w r" "Lsp Workspace Folders Remove" lsp-workspace-folders-remove)
+    ("w a" "Lsp Workspace Folders Add" lsp-workspace-folders-add)
+    ("w h" "Lsp Toggle Symbol Highlight" lsp-toggle-symbol-highlight
+     :transient
+     t)]
+   ["Misc"
+    ("w d" "Describe session" lsp-describe-session)
+    ("w D" "Lsp Disconnect" lsp-disconnect)
+    ("s" "Restart server" lsp-workspace-restart)
+    ("k" "Shutdown server" lsp-workspace-shutdown)
+    ("t" "Toggle log" lsp-toggle-trace-io  :transient t)
+    ("v" "Show log" lsp-workspace-show-log)]])
+
 
 (provide 'km-lsp)
 ;;; km-lsp.el ends here
