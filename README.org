@@ -1,0 +1,54 @@
+#+OPTIONS: ^:nil tags:nil num:nil
+
+* About
+
+Misc lsp customizations.
+
+* Table of Contents                                       :TOC_2_gh:QUOTE:
+#+BEGIN_QUOTE
+- [[#about][About]]
+- [[#requirements][Requirements]]
+- [[#installation][Installation]]
+  - [[#with-use-package-and-straightel][With use-package and straight.el]]
+  - [[#manual-installation][Manual installation]]
+#+END_QUOTE
+
+* Requirements
+
+| Name  | Version |
+|-------+---------|
+| Emacs |    29.1 |
+
+
+* Installation
+
+** With use-package and straight.el
+#+begin_src elisp :eval no
+(use-package km-lsp
+  :straight (km-lsp
+             :repo "KarimAziev/km-lsp"
+             :type git
+             :host github)
+  :demand t
+  :after lsp
+  :config
+  (with-eval-after-load 'lsp-volar
+    (when (fboundp 'lsp-register-custom-settings)
+      (lsp-register-custom-settings
+       '(("typescript.tsdk" km-lsp-custom-typescript-sdk t))))))
+#+end_src
+
+** Manual installation
+
+Download the source code and put it wherever you like, e.g. into =~/.emacs.d/km-lsp/=
+
+#+begin_src shell :eval no
+git clone https://github.com/KarimAziev/km-lsp.git ~/.emacs.d/km-lsp/
+#+end_src
+
+Add the downloaded directory to the load path:
+
+#+begin_src elisp :eval no
+(add-to-list 'load-path "~/.emacs.d/km-lsp/")
+(require 'km-lsp)
+#+end_src
