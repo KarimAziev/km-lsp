@@ -6,7 +6,7 @@
 ;; URL: https://github.com/KarimAziev/km-lsp
 ;; Version: 0.1.0
 ;; Keywords: convenience
-;; Package-Requires: ((emacs "29.1") (transient "0.6.0"))
+;; Package-Requires: ((emacs "29.1") (transient "0.7.2"))
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is NOT part of GNU Emacs.
@@ -33,6 +33,7 @@
 
 
 (require 'transient)
+
 (defvar-local km-lsp-custom-typescript-sdk-path nil)
 
 
@@ -100,6 +101,58 @@ Usage example:
                  'lsp-volar-get-typescript-tsdk-path)
             (lsp-volar-get-typescript-tsdk-path))))))
 
+(defun km-lsp-booster--advice-json-parse (old-fn &rest args)
+  "Parse JSON or execute bytecode if the following character is '#'.
+
+Argument OLD-FN is the original JSON parsing function to be advised.
+
+Remaining arguments ARGS are additional arguments passed to OLD-FN."
+  (or
+   (when (equal (following-char) ?#)
+     (let ((bytecode (read (current-buffer))))
+       (when (byte-code-function-p bytecode)
+         (funcall bytecode))))
+   (apply old-fn args)))
+
+(defvar lsp-use-plists)
+(defun km-lsp-booster--advice-final-command (old-fn cmd &optional test?)
+  "Advise command CMD to use \"emacs-lsp-booster\" if conditions are met.
+
+Argument OLD-FN is the original function to be advised.
+
+Argument CMD is the command to be executed.
+
+Optional argument TEST? is a boolean flag for testing purposes."
+  (require 'lsp-mode)
+  (let ((orig-result (funcall old-fn cmd test?)))
+    (if (and (not test?) ;; for check lsp-server-present?
+             (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
+             lsp-use-plists
+             (not (functionp 'json-rpc-connection)) ;; native json-rpc
+             (executable-find "emacs-lsp-booster"))
+        (progn
+          (message "Using emacs-lsp-booster for %s!" orig-result)
+          (cons "emacs-lsp-booster" orig-result))
+      orig-result)))
+
+;;;###autoload
+(defun km-lsp-booster-enable ()
+  "Enable LSP booster if conditions are met and add necessary advices."
+  (require 'lsp-mode)
+  (when (and (equal (getenv "LSP_USE_PLISTS") "true")
+             (executable-find "emacs-lsp-booster")
+             lsp-use-plists)
+    (advice-add (if (progn
+                      (require 'json nil t)
+                      (fboundp 'json-parse-buffer))
+                    'json-parse-buffer
+                  'json-read)
+                :around
+                #'km-lsp-booster--advice-json-parse)
+    (advice-add 'lsp-resolve-final-command :around
+                #'km-lsp-booster--advice-final-command)))
+
+
 ;;;###autoload (autoload 'km-lsp-menu "km-lsp" nil t)
 (transient-define-prefix km-lsp-menu ()
   "Command dispatcher for LSP related commands."
@@ -131,7 +184,7 @@ Usage example:
    ["Misc"
     ("w d" "Describe session" lsp-describe-session)
     ("w D" "Lsp Disconnect" lsp-disconnect)
-    ("s" "Restart server" lsp-workspace-restart)
+    ("R" "Restart server" lsp-workspace-restart)
     ("k" "Shutdown server" lsp-workspace-shutdown)
     ("t" "Toggle log" lsp-toggle-trace-io  :transient t)
     ("v" "Show log" lsp-workspace-show-log)]])
