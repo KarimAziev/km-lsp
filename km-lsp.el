@@ -33,6 +33,7 @@
 
 
 (require 'transient)
+(require 'lsp-mode)
 
 (defvar-local km-lsp-custom-typescript-sdk-path nil)
 
@@ -101,6 +102,8 @@ Usage example:
                  'lsp-volar-get-typescript-tsdk-path)
             (lsp-volar-get-typescript-tsdk-path))))))
 
+;; lsp-booster
+
 (defun km-lsp-booster--advice-json-parse (old-fn &rest args)
   "Parse JSON or execute bytecode if the following character is '#'.
 
@@ -115,6 +118,7 @@ Remaining arguments ARGS are additional arguments passed to OLD-FN."
    (apply old-fn args)))
 
 (defvar lsp-use-plists)
+
 (defun km-lsp-booster--advice-final-command (old-fn cmd &optional test?)
   "Advise command CMD to use \"emacs-lsp-booster\" if conditions are met.
 
@@ -123,7 +127,6 @@ Argument OLD-FN is the original function to be advised.
 Argument CMD is the command to be executed.
 
 Optional argument TEST? is a boolean flag for testing purposes."
-  (require 'lsp-mode)
   (let ((orig-result (funcall old-fn cmd test?)))
     (if (and (not test?) ;; for check lsp-server-present?
              (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
@@ -138,7 +141,6 @@ Optional argument TEST? is a boolean flag for testing purposes."
 ;;;###autoload
 (defun km-lsp-booster-enable ()
   "Enable LSP booster if conditions are met and add necessary advices."
-  (require 'lsp-mode)
   (when (and (equal (getenv "LSP_USE_PLISTS") "true")
              (executable-find "emacs-lsp-booster")
              lsp-use-plists)
@@ -156,37 +158,43 @@ Optional argument TEST? is a boolean flag for testing purposes."
 ;;;###autoload (autoload 'km-lsp-menu "km-lsp" nil t)
 (transient-define-prefix km-lsp-menu ()
   "Command dispatcher for LSP related commands."
-  [["Refactor"
-    ("r" "Rename" lsp-rename)
-    ("= =" "Lsp Format Buffer" lsp-format-buffer)
-    ("= r" "Lsp Format Region" lsp-format-region)
+  ["LSP"
+   ["Refactor"
+    ("r" "Rename symbol" lsp-rename)
+    ("= =" "Format buffer" lsp-format-buffer)
+    ("= r" "Format region" lsp-format-region)
     ("T f" "Toggle on type formatting" lsp-toggle-on-type-formatting
      :transient t)]
    ["Actions"
     ("a" "Code actions" lsp-execute-code-action)
     ("i" "Imports fix" lsp-organize-imports)
     ("." "Show Signature" lsp-signature-activate)
-    ("S" "Lsp Toggle Signature Auto Activate"
-     lsp-toggle-signature-auto-activate :transient t)]]
+    ("S" "Toggle signature auto activate" lsp-toggle-signature-auto-activate
+     :transient t)]]
   [["Navigation"
     ("f d" "Find definition" lsp-find-definition)
     ("f t" "Find type definition" lsp-find-type-definition)
     ("f i" "Find implementation" lsp-find-implementation)
     ("f ." "Find references" lsp-find-references)
-    ("h" "Highlight references" lsp-document-highlight)]]
+    ("h r" "Highlight references" lsp-document-highlight)
+    ("h s" "Highlight symbol" lsp-toggle-symbol-highlight :transient t)]]
   [["Workspace"
-    ("w b" "Lsp Workspace Blocklist Remove" lsp-workspace-blocklist-remove)
-    ("w r" "Lsp Workspace Folders Remove" lsp-workspace-folders-remove)
-    ("w a" "Lsp Workspace Folders Add" lsp-workspace-folders-add)
-    ("w h" "Lsp Toggle Symbol Highlight" lsp-toggle-symbol-highlight
-     :transient
-     t)]
-   ["Misc"
+    ("w b" "Remove blocklist" lsp-workspace-blocklist-remove)
+    ("w r" "Remove folders" lsp-workspace-folders-remove)
+    ("w a" "Add folders" lsp-workspace-folders-add)
     ("w d" "Describe session" lsp-describe-session)
-    ("w D" "Lsp Disconnect" lsp-disconnect)
+    ("w D" "Disconnect" lsp-disconnect)]
+   ["Misc"
     ("R" "Restart server" lsp-workspace-restart)
-    ("k" "Shutdown server" lsp-workspace-shutdown)
-    ("t" "Toggle log" lsp-toggle-trace-io  :transient t)
+    ("K" "Shutdown server" lsp-workspace-shutdown)
+    ("t" lsp-toggle-trace-io
+     :description  (lambda ()
+                     (concat "Toggle logging "
+                             (propertize " " 'display
+                                         (list 'space :align-to 40))
+                             (if (bound-and-true-p lsp-log-io)
+                                 "[X]" "[ ]")))
+     :transient t)
     ("v" "Show log" lsp-workspace-show-log)]])
 
 
