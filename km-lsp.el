@@ -72,12 +72,12 @@ Usage example:
    (setq km-lsp-custom-typescript-sdk-path
          (or
           (ignore-errors
-            (when-let ((file (expand-file-name
+            (when-let* ((file (expand-file-name
                               "node_modules/typescript/lib"
                               (km-lsp-project-root (project-current nil)))))
               (and (file-exists-p file)
                    file)))
-          (when-let ((file (locate-dominating-file default-directory
+          (when-let* ((file (locate-dominating-file default-directory
                                                    "node_modules/typescript/lib")))
             (expand-file-name file "node_modules/typescript/lib"))
           (let ((files
