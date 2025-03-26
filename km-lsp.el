@@ -155,12 +155,48 @@ Optional argument TEST? is a boolean flag for testing purposes."
                 #'km-lsp-booster--advice-final-command)))
 
 
+(defun km-lsp-reload-workspaces ()
+  "Restart all active LSP workspaces by shutting them down."
+  (interactive)
+  (let ((workspaces (lsp-workspaces)))
+    (dolist (workspace workspaces)
+      (let ((lsp--cur-workspace workspace))
+        (lsp--warn "Restarting %s" (lsp--workspace-print lsp--cur-workspace))
+        (lsp--shutdown-workspace t)))))
+
+
+
+(defun km-lsp--make-toggle-description (label value &optional align)
+  "Create a toggle description string with optional alignment.
+
+Argument LABEL is a string used as the label for the toggle.
+
+Argument VALUE is a boolean indicating the toggle state.
+
+Optional argument ALIGN is an integer specifying the alignment position."
+  (concat label
+          (unless (string-suffix-p " " label)
+            " ")
+          (propertize " " 'display
+                      (list 'space :align-to (or align 40)))
+          (if value
+              (concat "["
+                      (propertize
+                       "+"
+                       'face
+                       'success)
+                      "]")
+            "[ ]")))
+
+
 ;;;###autoload (autoload 'km-lsp-menu "km-lsp" nil t)
 (transient-define-prefix km-lsp-menu ()
   "Command dispatcher for LSP related commands."
   ["LSP"
    ["Refactor"
-    ("r" "Rename symbol" lsp-rename)
+    ("r" "Rename symbol" lsp-rename :inapt-if-not (lambda ()
+                                                    (lsp-feature?
+                                                     "textDocument/rename")))
     ("= =" "Format buffer" lsp-format-buffer)
     ("= r" "Format region" lsp-format-region)
     ("T f" "Toggle on type formatting" lsp-toggle-on-type-formatting
@@ -168,34 +204,76 @@ Optional argument TEST? is a boolean flag for testing purposes."
    ["Actions"
     ("a" "Code actions" lsp-execute-code-action)
     ("i" "Imports fix" lsp-organize-imports)
-    ("." "Show Signature" lsp-signature-activate)
     ("S" "Toggle signature auto activate" lsp-toggle-signature-auto-activate
      :transient t)]]
   [["Navigation"
-    ("f d" "Find definition" lsp-find-definition)
-    ("f t" "Find type definition" lsp-find-type-definition)
-    ("f i" "Find implementation" lsp-find-implementation)
-    ("f ." "Find references" lsp-find-references)
+    ("f d" "Go to definition" lsp-find-definition :inapt-if-not
+     (lambda ()
+       (lsp-feature? "textDocument/definition")))
+    ("f ." "Find references" lsp-find-references :inapt-if-not
+     (lambda ()
+       (lsp-feature?
+        "textDocument/references")))
+    ("f i" "Find implementations" lsp-find-implementation :inapt-if-not
+     (lambda ()
+       (lsp-feature?
+        "textDocument/implementation")))
+    ("f c" "Find declarations" lsp-find-declaration :inapt-if-not
+     (lambda ()
+       (lsp-feature?
+        "textDocument/declaration")))
+    ("f t" "Go to type declaration" lsp-find-type-definition  :inapt-if-not
+     (lambda ()
+       (lsp-feature? "textDocument/typeDefinition")))
     ("h r" "Highlight references" lsp-document-highlight)
     ("h s" "Highlight symbol" lsp-toggle-symbol-highlight :transient t)]]
-  [["Workspace"
-    ("w b" "Remove blocklist" lsp-workspace-blocklist-remove)
-    ("w r" "Remove folders" lsp-workspace-folders-remove)
-    ("w a" "Add folders" lsp-workspace-folders-add)
-    ("w d" "Describe session" lsp-describe-session)
-    ("w D" "Disconnect" lsp-disconnect)]
-   ["Misc"
+  [["Session"
+    ("v" "View logs" lsp-workspace-show-log)
+    ("s" "Describe session" lsp-describe-session)
     ("R" "Restart server" lsp-workspace-restart)
-    ("K" "Shutdown server" lsp-workspace-shutdown)
-    ("t" lsp-toggle-trace-io
-     :description  (lambda ()
-                     (concat "Toggle logging "
-                             (propertize " " 'display
-                                         (list 'space :align-to 40))
-                             (if (bound-and-true-p lsp-log-io)
-                                 "[X]" "[ ]")))
-     :transient t)
-    ("v" "Show log" lsp-workspace-show-log)]])
+    ("K" "Shutdown server" lsp-workspace-shutdown)]
+   ["Workspace Folders"
+    ("w b" "Remove blocklist" lsp-workspace-blocklist-remove)
+    ("w a" "Add folders" lsp-workspace-folders-add)
+    ("w r" "Remove folders" lsp-workspace-folders-remove)
+    ("w o" "Add folders" lsp-workspace-folders-open)
+    ("w D" "Disconnect" lsp-disconnect)]]
+  ["Toggle features"
+   ("t l"  lsp-lens-mode
+    :transient t
+    :description  (lambda ()
+                    (km-lsp--make-toggle-description "Lenses "
+                                                     (bound-and-true-p
+                                                      lsp-lens-mode))))
+   ("t h" lsp-headerline-breadcrumb-mode
+    :transient t
+    :description
+    (lambda ()
+      (km-lsp--make-toggle-description "Headerline breadcrumb"
+                                       (bound-and-true-p
+                                        lsp-headerline-breadcrumb-mode))))
+   ("t c" lsp-modeline-code-actions-mode
+    :transient t
+    :description
+    (lambda ()
+      (km-lsp--make-toggle-description "Modeline code actions"
+                                       (bound-and-true-p
+                                        lsp-modeline-code-actions-mode))))
+   ("t d" lsp-modeline-diagnostics-mode
+    :transient t
+    :description
+    (lambda ()
+      (km-lsp--make-toggle-description
+       "Modeline diagnostics"
+       (bound-and-true-p
+        lsp-modeline-diagnostics-mode))))
+   ("t t" lsp-toggle-trace-io
+    :description  (lambda ()
+                    (km-lsp--make-toggle-description
+                     "Toggle logging "
+                     (bound-and-true-p
+                      lsp-log-io)))
+    :transient t)])
 
 
 (provide 'km-lsp)
