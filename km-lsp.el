@@ -66,7 +66,7 @@ Usage example:
 \\=(with-eval-after-load \\='lsp-volar
     (when (fboundp \\='lsp-register-custom-settings)
       (lsp-register-custom-settings
-       \\='((\" typescript.tsdk\" km-lsp-custom-typescript-sdk t)))))"
+       \\='((\"typescript.tsdk\" km-lsp-custom-typescript-sdk t)))))"
   (or
    km-lsp-custom-typescript-sdk-path
    (setq km-lsp-custom-typescript-sdk-path
