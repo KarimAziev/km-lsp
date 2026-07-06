@@ -134,6 +134,9 @@ Optional argument TEST? is a boolean flag for testing purposes."
              (not (functionp 'json-rpc-connection)) ;; native json-rpc
              (executable-find "emacs-lsp-booster"))
         (progn
+          (when-let* ((command-from-exec-path
+                       (executable-find (car orig-result)))) ;; resolve command from exec-path (in case not found in $PATH)
+            (setcar orig-result command-from-exec-path))
           (message "Using emacs-lsp-booster for %s!" orig-result)
           (cons "emacs-lsp-booster" orig-result))
       orig-result)))
@@ -141,9 +144,10 @@ Optional argument TEST? is a boolean flag for testing purposes."
 ;;;###autoload
 (defun km-lsp-booster-enable ()
   "Enable LSP booster if conditions are met and add necessary advices."
-  (when (and (equal (getenv "LSP_USE_PLISTS") "true")
-             (executable-find "emacs-lsp-booster")
-             lsp-use-plists)
+  (when (and
+         lsp-use-plists
+         (equal (getenv "LSP_USE_PLISTS") "true")
+         (executable-find "emacs-lsp-booster"))
     (advice-add (if (progn
                       (require 'json nil t)
                       (fboundp 'json-parse-buffer))
@@ -153,6 +157,18 @@ Optional argument TEST? is a boolean flag for testing purposes."
                 #'km-lsp-booster--advice-json-parse)
     (advice-add 'lsp-resolve-final-command :around
                 #'km-lsp-booster--advice-final-command)))
+
+;;;###autoload
+(defun km-lsp-booster-disable ()
+  "Disable LSP booster."
+  (advice-remove (if (progn
+                       (require 'json nil t)
+                       (fboundp 'json-parse-buffer))
+                     'json-parse-buffer
+                   'json-read)
+                 #'km-lsp-booster--advice-json-parse)
+  (advice-remove 'lsp-resolve-final-command
+                 #'km-lsp-booster--advice-final-command))
 
 
 (defun km-lsp-reload-workspaces ()
